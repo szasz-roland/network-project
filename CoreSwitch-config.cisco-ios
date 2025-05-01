@@ -1,0 +1,112 @@
+! -----------------------------
+! Core Switch Configuration
+! -----------------------------
+!
+! General Configuration ------------------------------------
+enable
+configure terminal
+hostname CoreSwitch
+!
+enable secret SuperSecretPassword
+service password-encryption
+banner motd "Csak Engedelyezett Felhasznaloknak"
+!
+no cdp run
+no ip domain-lookup
+username Admin privilege 15 secret SuperSecretPassword
+ip domain-name roadzo.budapest.hu
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+!
+line vty 0 15
+ login local
+ transport input ssh
+ exec-timeout 5 0
+!
+line console 0
+ login local 
+ exec-timeout 5 0
+!
+! Enable Layer 3 Routing ------------------------------------
+ip routing
+!
+! Vlan Configuration ------------------------------------
+vlan 10
+ name A_Dolgozok
+vlan 20
+ name B_Dolgozok
+vlan 30
+ name Teruleti_Igazgatosag
+vlan 40
+ name Oktatoi_Eszkozok
+vlan 69
+ name Native
+vlan 99
+ name Management
+vlan 150
+ name Sound
+!
+interface vlan10
+ description Link to VLAN 10 - A Dolgozók
+ ip address 192.168.10.1 255.255.255.240
+ ip helper-address 10.10.99.10 
+!
+interface vlan20
+ description Link to VLAN 20 - B Dolgozók
+ ip address 192.168.20.1 255.255.255.240
+ ip helper-address 10.10.99.10 
+!
+interface vlan30
+ description Link to VLAN 30 - Területi Igazgatóság
+ ip address 192.168.30.1 255.255.255.240
+!
+interface vlan40
+ description Link to VLAN 40 - Oktatói Eszközök
+ ip address 192.168.40.1 255.255.255.240
+!
+interface vlan99
+ description Link to VLAN 99 - Kihelyezett Admin
+ ip address 10.10.99.1 255.255.255.240
+!
+interface vlan150
+ description VLAN 150 - Sound VLAN
+ ip address 192.168.150.1 255.255.255.240
+!
+interface vlan69 
+ description VLAN 69 - Native VLAN
+ ! This Vlan is only used for NATIVE vlan ( untagged trafic)
+!
+! Uplink to ORIGO Router ------------------------------------
+interface gi0/1
+ description Uplink to ORIGO Router
+ no switchport
+ ip address 11.11.11.2 255.255.255.252
+ no shutdown
+!
+! Uplink to sw-level-0 Switch ------------------------------------
+interface gi0/2
+ description Uplink to sw-szint-0
+ switchport mode trunk
+ switchport trunk native vlan 69
+ switchport trunk allowed vlan 10,20,30,40,69,99,150
+ no shutdown
+!
+! Open Shortest Path First (OSPF) ------------------------------------
+router ospf 1
+ passive-interface default 
+ no passive-interface g0/1
+!
+ router-id 5.5.5.5
+ network 11.11.11.0 0.0.0.3 area 0
+ network 192.168.10.0 0.0.0.15 area 0
+ network 192.168.20.0 0.0.0.15 area 0
+ network 192.168.30.0 0.0.0.15 area 0
+ network 192.168.40.0 0.0.0.15 area 0
+ network 10.10.99.0 0.0.0.15 area 0
+ network 192.168.150.0 0.0.0.3 area 0
+exit
+!
+! Saving Configuration
+do write
+end
+!
